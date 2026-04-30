@@ -10,6 +10,9 @@ import Home from "./pages/Home";
 import Bookings from "./pages/Booking";
 import Admin from "./pages/Admin";
 import StaffDashboard from "./pages/Court";
+import PaymentPage from "./pages/PaymentPage";
+import Login from "./pages/LoginPage";
+// import BookingHistory from "./pages/BookingHistory";
 
 const App: React.FC = () => {
   return (
@@ -20,6 +23,9 @@ const App: React.FC = () => {
         <Route path="/courts" element={<StaffDashboard />} />
         <Route path="/bookings" element={<Bookings />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/payment" element={<PaymentPage />} />
+        {/* <Route path="/history" element={<BookingHistory />} /> */}
       </Routes>
     </Router>
   );

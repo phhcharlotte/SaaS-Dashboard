@@ -1,19 +1,48 @@
-import { Container, Paper, Typography, TextField, Button } from "@mui/material";
-import useAuth from "../hooks/Auth/auth";
+import { Container, TextField, Button, Typography, Stack } from "@mui/material";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+// import { useAuth } from "@/context/AuthContext";
 
-export default function LoginPage() {
-  const { login } = useAuth();
+const Login: React.FC = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  // const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogin = () => {
+    // mock role theo email
+    // if (email.includes("admin")) login("admin");
+    // else if (email.includes("staff")) login("staff");
+    // else login("user");
+
+    navigate("/");
+  };
 
   return (
-    <Container maxWidth="sm">
-      <Paper sx={{ p: 4, mt: 10 }}>
-        <Typography variant="h5">Login</Typography>
-        <TextField fullWidth label="Username" margin="normal" />
-        <TextField fullWidth label="Password" type="password" margin="normal" />
-        <Button fullWidth variant="contained" sx={{ mt: 2 }} onClick={login}>
+    <Container sx={{ mt: 6, maxWidth: 400 }}>
+      <Typography variant="h4" gutterBottom>
+        Login
+      </Typography>
+
+      <Stack spacing={2}>
+        <TextField
+          label="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <TextField
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <Button variant="contained" onClick={handleLogin}>
           Login
         </Button>
-      </Paper>
+      </Stack>
     </Container>
   );
-}
+};
+
+export default Login;
