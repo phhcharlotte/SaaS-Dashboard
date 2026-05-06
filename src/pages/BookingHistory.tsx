@@ -87,21 +87,3 @@ const BookingHistory: React.FC = () => {
 };
 
 export default BookingHistory;
-
-// ================= ROUTER =================
-/*
-<Route path="/history" element={<BookingHistory />} />
-*/
-
-// ================= NOTES =================
-/*
-User có thể:
-✔ Xem lịch sử đặt sân
-✔ Xem trạng thái: pending / confirmed / paid / cancelled
-
-NEXT:
-- Filter theo trạng thái
-- Xem chi tiết booking
-- Cancel booking
-- API thật (theo userId)
-*/

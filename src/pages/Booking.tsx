@@ -1,5 +1,3 @@
-// ================= USER BOOKING (ADD TIME RANGE FILTER) =================
-
 import React, { useMemo, useState } from "react";
 import {
   Container,
@@ -13,19 +11,22 @@ import {
   Stack,
   FormControlLabel,
   Checkbox,
+  CardActionArea,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
 interface Court {
   id: number;
   name: string;
-  price: number; // VND/hour
+  price: number;
 }
 
 interface Slot {
-  time: string; // HH:mm
+  time: string;
   available: boolean;
 }
+
+type BookingType = "casual" | "fixed";
 
 const courts: Court[] = [
   { id: 1, name: "Court 1", price: 100000 },
@@ -51,7 +52,6 @@ const slotsByCourt: Record<number, Slot[]> = {
   ],
 };
 
-// helper so sánh giờ "HH:mm"
 const toMinutes = (t: string) => {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -68,15 +68,49 @@ const BookingPage: React.FC = () => {
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string>("");
 
-  // Filters
+  const [bookingType, setBookingType] = useState<BookingType>("casual");
+  const [duration, setDuration] = useState<number | null>(null);
+
   const [search, setSearch] = useState("");
-  const [minPrice, setMinPrice] = useState<string>("");
-  const [maxPrice, setMaxPrice] = useState<string>("");
-  const [onlyAvailable, setOnlyAvailable] = useState<boolean>(false);
-  const [startTime, setStartTime] = useState<string>("");
-  const [endTime, setEndTime] = useState<string>("");
+  const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
 
   const navigate = useNavigate();
+
+  // ================= PRICE =================
+  const getPrice = () => {
+    if (!selectedCourt) return 0;
+
+    if (bookingType === "casual") {
+      return selectedCourt.price;
+    }
+
+    const discountMap: Record<number, number> = {
+      1: 0.9,
+      3: 0.85,
+      6: 0.8,
+      12: 0.7,
+    };
+
+    if (!duration) return 0;
+
+    return Math.round(
+      selectedCourt.price * duration * 4 * discountMap[duration],
+    );
+  };
+
+  // ================= START DATE =================
+  const getStartDate = () => {
+    const today = new Date();
+    const week = Math.ceil(today.getDate() / 7);
+
+    if (week > 1) {
+      return new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    }
+
+    return today;
+  };
 
   const handleBooking = () => {
     if (!selectedCourt || !selectedSlot) return;
@@ -85,88 +119,59 @@ const BookingPage: React.FC = () => {
       state: {
         court: selectedCourt,
         slot: selectedSlot,
+        type: bookingType,
+        duration,
+        total: getPrice(),
+        startDate: getStartDate(),
       },
     });
   };
 
+  // ================= FILTER =================
   const filteredCourts = useMemo(() => {
     return courts.filter((c) => {
       const matchSearch = c.name.toLowerCase().includes(search.toLowerCase());
 
-      const min = minPrice ? Number(minPrice) : -Infinity;
-      const max = maxPrice ? Number(maxPrice) : Infinity;
-      const matchPrice = c.price >= min && c.price <= max;
-
       const slots = slotsByCourt[c.id] || [];
 
-      // lọc theo khung giờ + trạng thái
-      const hasSlotInRange = slots.some((s) => {
-        const okTime = inRange(
-          s.time,
-          startTime || undefined,
-          endTime || undefined,
-        );
+      const hasSlot = slots.some((s) => {
+        const okTime = inRange(s.time, startTime, endTime);
         const okAvail = onlyAvailable ? s.available : true;
         return okTime && okAvail;
       });
 
-      const matchAvailability = hasSlotInRange;
-
-      return matchSearch && matchPrice && matchAvailability;
+      return matchSearch && hasSlot;
     });
-  }, [search, minPrice, maxPrice, onlyAvailable, startTime, endTime]);
+  }, [search, onlyAvailable, startTime, endTime]);
 
   const currentSlots = useMemo(() => {
-    if (!selectedCourt) return [] as Slot[];
-    const slots = slotsByCourt[selectedCourt.id] || [];
-    return slots.filter((s) =>
-      inRange(s.time, startTime || undefined, endTime || undefined),
+    if (!selectedCourt) return [];
+    return (slotsByCourt[selectedCourt.id] || []).filter((s) =>
+      inRange(s.time, startTime, endTime),
     );
   }, [selectedCourt, startTime, endTime]);
 
   return (
     <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Book a Court
-      </Typography>
+      <Typography variant="h4">Book a Court</Typography>
 
-      {/* FILTERS */}
-      <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 3 }}>
+      {/* FILTER */}
+      <Stack direction="row" spacing={2} sx={{ my: 3 }}>
         <TextField
-          label="Search court"
+          label="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          fullWidth
         />
-
         <TextField
-          label="Min price"
-          type="number"
-          value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
-        />
-
-        <TextField
-          label="Max price"
-          type="number"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-        />
-
-        <TextField
-          label="Start time"
           type="time"
           value={startTime}
           onChange={(e) => setStartTime(e.target.value)}
         />
-
         <TextField
-          label="End time"
           type="time"
           value={endTime}
           onChange={(e) => setEndTime(e.target.value)}
         />
-
         <FormControlLabel
           control={
             <Checkbox
@@ -176,65 +181,93 @@ const BookingPage: React.FC = () => {
           }
           label="Only available"
         />
-
-        <Button
-          variant="outlined"
-          onClick={() => {
-            setSearch("");
-            setMinPrice("");
-            setMaxPrice("");
-            setOnlyAvailable(false);
-            setStartTime("");
-            setEndTime("");
-          }}>
-          Reset
-        </Button>
       </Stack>
 
-      {/* COURT LIST */}
+      {/* COURTS */}
       <Grid container spacing={2}>
         {filteredCourts.map((court) => (
           <Grid item xs={12} md={4} key={court.id}>
-            <Card
-              onClick={() => {
-                setSelectedCourt(court);
-                setSelectedSlot("");
-              }}
-              sx={{ cursor: "pointer" }}>
-              <CardContent>
-                <Typography variant="h6">{court.name}</Typography>
-                <Typography>{court.price} VND / hour</Typography>
-              </CardContent>
+            <Card>
+              <CardActionArea
+                onClick={() => {
+                  setSelectedCourt(court);
+                  setSelectedSlot("");
+                }}>
+                <CardContent>
+                  <Typography variant="h6">{court.name}</Typography>
+                  <Typography>{court.price} VND</Typography>
+                </CardContent>
+              </CardActionArea>
             </Card>
           </Grid>
         ))}
       </Grid>
 
-      {/* SLOT VIEW */}
+      {/* SLOT */}
       {selectedCourt && (
         <Card sx={{ mt: 4 }}>
           <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Available Slots - {selectedCourt.name}
-            </Typography>
+            <Typography>Slots - {selectedCourt.name}</Typography>
 
             <Stack direction="row" spacing={1} flexWrap="wrap">
               {currentSlots.map((slot) => (
                 <Chip
                   key={slot.time}
                   label={slot.time}
-                  color={slot.available ? "success" : "default"}
                   clickable={slot.available}
+                  color={slot.available ? "success" : "default"}
                   onClick={() => slot.available && setSelectedSlot(slot.time)}
-                  variant={selectedSlot === slot.time ? "filled" : "outlined"}
                 />
               ))}
             </Stack>
 
+            {/* BOOKING TYPE */}
+            <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
+              <Chip
+                label="Vãng lai"
+                clickable
+                color={bookingType === "casual" ? "primary" : "default"}
+                onClick={() => {
+                  setBookingType("casual");
+                  setDuration(null);
+                }}
+              />
+              <Chip
+                label="Cố định"
+                clickable
+                color={bookingType === "fixed" ? "primary" : "default"}
+                onClick={() => setBookingType("fixed")}
+              />
+            </Stack>
+
+            {/* DURATION */}
+            {bookingType === "fixed" && (
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                {[1, 3, 6, 12].map((m) => (
+                  <Chip
+                    key={m}
+                    label={`${m} tháng`}
+                    clickable
+                    color={duration === m ? "primary" : "default"}
+                    onClick={() => setDuration(m)}
+                  />
+                ))}
+              </Stack>
+            )}
+
+            {/* PRICE */}
+            <Typography sx={{ mt: 2 }}>Total: {getPrice()} VND</Typography>
+
+            {bookingType === "fixed" && duration && (
+              <Typography color="text.secondary">
+                Start from: {getStartDate().toLocaleDateString()}
+              </Typography>
+            )}
+
             <Button
               variant="contained"
               sx={{ mt: 3 }}
-              disabled={!selectedSlot}
+              disabled={!selectedSlot || (bookingType === "fixed" && !duration)}
               onClick={handleBooking}>
               Confirm Booking
             </Button>
