@@ -7,9 +7,7 @@ import "./assets/styles/base.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {/* <QueryClientProvider client={queryClient}> */}
     <App />
     <ToastContainer position="top-right" autoClose={2000} />
-    {/* </QueryClientProvider> */}
   </React.StrictMode>,
 );
